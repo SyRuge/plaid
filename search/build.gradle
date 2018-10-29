@@ -15,7 +15,9 @@
  *
  */
 
-apply plugin: 'com.android.library'
+apply plugin: 'com.android.dynamic-feature'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion versions.compileSdk
@@ -29,19 +31,17 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    buildTypes {
-        release {
-            proguardFiles 'proguard-rules.pro'
-            consumerProguardFiles 'proguard-rules.pro'
-        }
-    }
 }
 
 repositories {
     google()
     jcenter()
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
 }
 
 dependencies {
-    implementation project(':core')
+    implementation project(':app')
+
+    kapt "com.google.dagger:dagger-compiler:${versions.dagger}"
+
 }

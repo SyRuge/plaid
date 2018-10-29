@@ -23,19 +23,19 @@
     <dist:module
         dist:instant="false"
         dist:onDemand="false"
-        dist:title="@string/title_dribbble">
+        dist:title="@string/feature_name_dribbble">
         <dist:fusing dist:include="true" />
     </dist:module>
 
-    <application>
+    <application android:name="io.plaidapp.ui.PlaidApplication">
 
         <activity
-            android:name="io.plaidapp.ui.dribbble.DribbbleShot"
+            android:name=".ui.shot.ShotActivity"
             android:parentActivityName="io.plaidapp.ui.HomeActivity"
             android:theme="@style/Plaid.Translucent.Dribbble.Shot" />
 
         <provider
-            android:name="android.support.v4.content.FileProvider"
+            android:name="androidx.core.content.FileProvider"
             android:authorities="${filesAuthority}"
             android:exported="false"
             android:grantUriPermissions="true">

@@ -21,15 +21,15 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.Color;
-import android.support.annotation.ColorInt;
-import android.support.v4.content.ContextCompat;
+import androidx.annotation.ColorInt;
+import androidx.core.content.ContextCompat;
 import android.transition.ChangeBounds;
 import android.transition.TransitionValues;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
 
-import io.plaidapp.ui.drawable.MorphDrawable;
+import io.plaidapp.core.ui.drawable.MorphDrawable;
 
 import static io.plaidapp.core.util.AnimUtils.getFastOutLinearInInterpolator;
 import static io.plaidapp.core.util.AnimUtils.getFastOutSlowInInterpolator;

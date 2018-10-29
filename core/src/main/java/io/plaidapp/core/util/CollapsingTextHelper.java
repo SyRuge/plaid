@@ -26,19 +26,17 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.os.Build;
-import android.support.annotation.FloatRange;
-import android.support.design.R;
-import android.support.v4.text.TextDirectionHeuristicsCompat;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.view.ViewCompat;
+import androidx.annotation.FloatRange;
+import com.google.android.material.R;
+import androidx.core.math.MathUtils;
+import androidx.core.text.TextDirectionHeuristicsCompat;
+import androidx.core.view.GravityCompat;
+import androidx.core.view.ViewCompat;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.animation.Interpolator;
-
-import io.plaidapp.core.util.AnimUtils;
-import io.plaidapp.core.util.MathUtils;
 
 /**
  * Adapted from design support lib.
@@ -108,7 +106,7 @@ public final class CollapsingTextHelper {
      * A value of {@code 1.0} indicates that the layout is fully collapsed.
      */
     public void setExpansionFraction(@FloatRange(from = 0f, to = 1f) float fraction) {
-        fraction = MathUtils.constrain(fraction, 0f, 1f);
+        fraction = MathUtils.clamp(fraction, 0f, 1f);
         if (fraction != mExpandedFraction) {
             mExpandedFraction = fraction;
             calculateCurrentOffsets();

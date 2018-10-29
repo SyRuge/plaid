@@ -18,49 +18,55 @@
 package io.plaidapp.core.data;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import io.plaidapp.core.data.api.dribbble.DribbbleSearchService;
-import io.plaidapp.core.data.api.dribbble.model.Shot;
-import io.plaidapp.core.data.api.dribbble.model.User;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import io.plaidapp.core.data.prefs.SourceManager;
 import io.plaidapp.core.designernews.Injection;
-import io.plaidapp.core.designernews.data.api.DesignerNewsRepository;
+import io.plaidapp.core.designernews.domain.LoadStoriesUseCase;
+import io.plaidapp.core.designernews.domain.SearchStoriesUseCase;
+import io.plaidapp.core.dribbble.data.ShotsRepository;
+import io.plaidapp.core.dribbble.data.api.model.Shot;
 import io.plaidapp.core.producthunt.data.api.ProductHuntInjection;
 import io.plaidapp.core.producthunt.data.api.ProductHuntRepository;
 import io.plaidapp.core.ui.FilterAdapter;
 import kotlin.Unit;
 import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
+
+import javax.inject.Inject;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Responsible for loading data from the various sources. Instantiating classes are responsible for
  * providing the {code onDataLoaded} method to do something with the data.
  */
-public abstract class DataManager extends BaseDataManager<List<? extends PlaidItem>>
+public class DataManager extends BaseDataManager<List<? extends PlaidItem>>
         implements LoadSourceCallback {
 
-    private final DesignerNewsRepository designerNewsRepository;
-    private final ProductHuntRepository productHuntRepository;
+    private final ShotsRepository shotsRepository;
     private final FilterAdapter filterAdapter;
-    private Map<String, Integer> pageIndexes;
-    private Map<String, Call> inflight;
+    private final LoadStoriesUseCase loadStoriesUseCase;
+    private final SearchStoriesUseCase searchStoriesUseCase;
+    private final ProductHuntRepository productHuntRepository;
+    Map<String, Integer> pageIndexes;
+    Map<String, Call> inflightCalls;
 
-    public DataManager(Context context, FilterAdapter filterAdapter) {
+    @Inject public DataManager(Context context,
+                       OnDataLoadedCallback<List<? extends PlaidItem>> onDataLoadedCallback,
+                       ShotsRepository shotsRepository,
+                       FilterAdapter filterAdapter) {
         super();
-        designerNewsRepository = Injection.provideDesignerNewsRepository(context);
+        loadStoriesUseCase = Injection.provideLoadStoriesUseCase(context);
+        searchStoriesUseCase = Injection.provideSearchStoriesUseCase(context);
         productHuntRepository = ProductHuntInjection.provideProductHuntRepository();
-
+        this.shotsRepository = shotsRepository;
         this.filterAdapter = filterAdapter;
+        setOnDataLoadedCallback(onDataLoadedCallback);
+
         filterAdapter.registerFilterChangedCallback(filterListener);
         setupPageIndexes();
-        inflight = new HashMap<>();
+        inflightCalls = new HashMap<>();
     }
 
     public void loadAllDataSources() {
@@ -71,13 +77,15 @@ public abstract class DataManager extends BaseDataManager<List<? extends PlaidIt
 
     @Override
     public void cancelLoading() {
-        if (inflight.size() > 0) {
-            for (Call call : inflight.values()) {
+        if (inflightCalls.size() > 0) {
+            for (Call call : inflightCalls.values()) {
                 call.cancel();
             }
-            inflight.clear();
+            inflightCalls.clear();
         }
-        designerNewsRepository.cancelAllRequests();
+        shotsRepository.cancelAllSearches();
+        loadStoriesUseCase.cancelAllRequests();
+        searchStoriesUseCase.cancelAllRequests();
         productHuntRepository.cancelAllRequests();
     }
 
@@ -89,28 +97,26 @@ public abstract class DataManager extends BaseDataManager<List<? extends PlaidIt
                         loadSource(changedFilter);
                     } else { // filter deactivated
                         final String key = changedFilter.key;
-                        if (inflight.containsKey(key)) {
-                            final Call call = inflight.get(key);
+                        if (inflightCalls.containsKey(key)) {
+                            final Call call = inflightCalls.get(key);
                             if (call != null) call.cancel();
-                            inflight.remove(key);
+                            inflightCalls.remove(key);
                         }
-                        designerNewsRepository.cancelRequestOfSource(key);
+                        loadStoriesUseCase.cancelRequestOfSource(key);
+                        searchStoriesUseCase.cancelRequestOfSource(key);
                         // clear the page index for the source
                         pageIndexes.put(key, 0);
                     }
                 }
             };
 
-    private void loadSource(Source source) {
+    void loadSource(Source source) {
         if (source.active) {
             loadStarted();
             final int page = getNextPageIndex(source.key);
             switch (source.key) {
                 case SourceManager.SOURCE_DESIGNER_NEWS_POPULAR:
-                    loadDesignerNewsTopStories(page);
-                    break;
-                case SourceManager.SOURCE_DESIGNER_NEWS_RECENT:
-                    loadDesignerNewsRecent(page);
+                    loadDesignerNewsStories(page);
                     break;
                 case SourceManager.SOURCE_PRODUCT_HUNT:
                     loadProductHunt(page);
@@ -156,47 +162,34 @@ public abstract class DataManager extends BaseDataManager<List<? extends PlaidIt
             setDataSource(data, source);
             onDataLoaded(data);
         }
-        inflight.remove(source);
+        inflightCalls.remove(source);
     }
 
     @Override
     public void loadFailed(@NonNull String source) {
         loadFinished();
-        inflight.remove(source);
+        inflightCalls.remove(source);
     }
 
-    private void loadDesignerNewsTopStories(final int page) {
-        designerNewsRepository.loadTopStories(page, this);
-    }
-
-    private void loadDesignerNewsRecent(final int page) {
-        designerNewsRepository.loadRecent(page, this);
+    private void loadDesignerNewsStories(final int page) {
+        loadStoriesUseCase.invoke(page, this);
     }
 
     private void loadDesignerNewsSearch(final Source.DesignerNewsSearchSource source,
                                         final int page) {
-        designerNewsRepository.search(source.key, page, this);
+        searchStoriesUseCase.invoke(source.key, page, this);
     }
 
     private void loadDribbbleSearch(final Source.DribbbleSearchSource source, final int page) {
-        final Call<List<Shot>> searchCall = getDribbbleSearchApi().search(source.query, page,
-                DribbbleSearchService.PER_PAGE_DEFAULT, DribbbleSearchService.SORT_RECENT);
-        searchCall.enqueue(new Callback<List<Shot>>() {
-            @Override
-            public void onResponse(Call<List<Shot>> call, Response<List<Shot>> response) {
-                if (response.isSuccessful()) {
-                    sourceLoaded(response.body(), page, source.key);
-                } else {
-                    loadFailed(source.key);
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<Shot>> call, Throwable t) {
+        shotsRepository.search(source.query, page, result -> {
+            if (result instanceof Result.Success) {
+                Result.Success<List<Shot>> success = (Result.Success<List<Shot>>) result;
+                sourceLoaded(success.getData(), page, source.key);
+            } else {
                 loadFailed(source.key);
             }
+            return Unit.INSTANCE;
         });
-        inflight.put(source.key, searchCall);
     }
 
     private void loadProductHunt(final int page) {

@@ -16,6 +16,8 @@
  */
 
 apply plugin: 'com.android.dynamic-feature'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion versions.compileSdk
@@ -23,27 +25,44 @@ android {
     defaultConfig {
         minSdkVersion versions.minSdk
         targetSdkVersion versions.targetSdk
-        def filesAuthorityValue = names.applicationId + ".shareprovider"
-        buildConfigField "String", "FILES_AUTHORITY", "\"${filesAuthorityValue}\""
+        def filesAuthorityValue = names.applicationId + '.shareprovider'
+        buildConfigField 'String', 'FILES_AUTHORITY', "\"${filesAuthorityValue}\""
         manifestPlaceholders = [filesAuthority: filesAuthorityValue]
+    }
+
+    dataBinding {
+        enabled true
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    buildTypes {
-        release {
-            proguardFiles 'proguard-rules.pro'
-        }
-    }
 }
 
 repositories {
     google()
     jcenter()
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
 }
 
 dependencies {
     implementation project(':app')
+    implementation "androidx.lifecycle:lifecycle-runtime:${versions.lifecycle}"
+    implementation "androidx.collection:collection:${versions.androidxCollection}"
+
+    kapt "com.google.dagger:dagger-compiler:${versions.dagger}"
+
+    testImplementation project(':test_shared')
+    testImplementation "androidx.arch.core:core-testing:${versions.lifecycle}"
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:${versions.mockito_kotlin}"
+    testImplementation "junit:junit:${versions.junit}"
+    testImplementation "org.mockito:mockito-core:${versions.mockito}"
+
+    // Work around issue with runtime classpath version conflict
+    androidTestImplementation "androidx.legacy:legacy-support-core-utils:${versions.legacyCoreUtils}"
+    androidTestImplementation "androidx.lifecycle:lifecycle-runtime:${versions.lifecycle}"
+
+    // Workaround for dependency conflict during assembleAndroidTest
+    androidTestImplementation("androidx.arch.core:core-runtime:2.0.1-alpha01")
 }

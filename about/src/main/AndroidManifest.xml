@@ -22,13 +22,13 @@
     <dist:module
         dist:instant="false"
         dist:onDemand="false"
-        dist:title="@string/title_about">
+        dist:title="@string/feature_name_about">
         <dist:fusing dist:include="true" />
     </dist:module>
 
-    <application>
+    <application android:name="io.plaidapp.ui.PlaidApplication">
     <activity
-        android:name="io.plaidapp.ui.about.AboutActivity"
+        android:name="io.plaidapp.about.ui.AboutActivity"
         android:theme="@style/Plaid.Translucent.About"
         android:parentActivityName="io.plaidapp.ui.HomeActivity">
         <intent-filter>

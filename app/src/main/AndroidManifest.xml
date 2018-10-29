@@ -20,7 +20,6 @@
         android:installLocation="auto"
         package="io.plaidapp">
 
-    <uses-permission android:name="android.permission.GET_ACCOUNTS"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
@@ -31,6 +30,7 @@
             android:supportsRtl="true"
             android:extractNativeLibs="false"
             android:appCategory="image"
+            android:name=".ui.PlaidApplication"
             android:theme="@style/Plaid">
 
         <activity

@@ -18,18 +18,15 @@
 package io.plaidapp.core.util;
 
 import android.content.res.ColorStateList;
-import android.os.Build;
-import android.support.annotation.ColorInt;
-import android.text.Html;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.style.URLSpan;
 import android.text.util.Linkify;
 import android.widget.TextView;
-
-import in.uncod.android.bypass.Bypass;
+import androidx.annotation.ColorInt;
+import in.uncod.android.bypass.LoadImageCallback;
+import in.uncod.android.bypass.Markdown;
 import in.uncod.android.bypass.style.TouchableUrlSpan;
 
 /**
@@ -56,25 +53,7 @@ public class HtmlUtils {
         textView.setLongClickable(false);
     }
 
-    /**
-     * Parse the given input using {@link TouchableUrlSpan}s rather than vanilla {@link URLSpan}s
-     * so that they respond to touch.
-     */
-    public static SpannableStringBuilder parseHtml(
-            String input,
-            ColorStateList linkTextColor,
-            @ColorInt int linkHighlightColor) {
-        SpannableStringBuilder spanned = fromHtml(input);
-
-        // strip any trailing newlines
-        while (spanned.charAt(spanned.length() - 1) == '\n') {
-            spanned = spanned.delete(spanned.length() - 1, spanned.length());
-        }
-
-        return linkifyPlainLinks(spanned, linkTextColor, linkHighlightColor);
-    }
-
-    private static SpannableStringBuilder linkifyPlainLinks(
+    static SpannableStringBuilder linkifyPlainLinks(
             CharSequence input,
             ColorStateList linkTextColor,
             @ColorInt int linkHighlightColor) {
@@ -99,18 +78,10 @@ public class HtmlUtils {
         return ssb;
     }
 
-    private static SpannableStringBuilder fromHtml(String input) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            return (SpannableStringBuilder) Html.fromHtml(input, Html.FROM_HTML_MODE_LEGACY);
-        } else {
-            return (SpannableStringBuilder) Html.fromHtml(input);
-        }
-    }
-
     /**
      * Parse Markdown and plain-text links.
      * <p/>
-     * {@link Bypass} does not handle plain text links (i.e. not md syntax) and requires a
+     * {@link Markdown} does not handle plain text links (i.e. not md syntax) and requires a
      * {@code String} input (i.e. squashes any spans). {@link Linkify} handles plain links but also
      * removes any existing spans. So we can't just run our input through both.
      * <p/>
@@ -120,29 +91,13 @@ public class HtmlUtils {
      */
     public static CharSequence parseMarkdownAndPlainLinks(
             String input,
-            Bypass markdown,
+            Markdown markdown,
             ColorStateList linkTextColors,
             @ColorInt int highlightColor,
-            Bypass.LoadImageCallback loadImageCallback) {
+            LoadImageCallback loadImageCallback) {
         CharSequence markedUp = markdown.markdownToSpannable(input, linkTextColors, highlightColor,
                 loadImageCallback);
         return linkifyPlainLinks(markedUp, linkTextColors, highlightColor);
     }
 
-    /**
-     * Parse Markdown and plain-text links and set on the {@link TextView} with proper clickable
-     * spans.
-     */
-    public static void parseMarkdownAndSetText(
-            TextView textView,
-            String input,
-            Bypass markdown,
-            ColorStateList linkTextColors,
-            @ColorInt int highlightColor,
-            Bypass.LoadImageCallback loadImageCallback) {
-        if (TextUtils.isEmpty(input)) return;
-        setTextWithNiceLinks(textView,
-                parseMarkdownAndPlainLinks(input, markdown, linkTextColors, highlightColor,
-                        loadImageCallback));
-    }
 }

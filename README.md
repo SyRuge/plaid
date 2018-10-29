@@ -14,6 +14,11 @@ Plaid was written with one big goal: showcase material design in Android in a re
 Plaid represents a great real world app example: it provides a fairly complex set of functionalities, it has technical debt, it has features that have to be dealt with as APIs are being removed.
 All of these problems are encountered by many projects in the Android community and therefore, make Plaid a suitable showcase for all the advantages that architecture components bring. 
 
+#### Read more
+
+* [Restitching Plaid - Updating Plaid to modern app standards](https://medium.com/@crafty/restitching-plaid-9ca5588d3b0a)
+* [A patchwork Plaid - Monolith to modularized app](https://medium.com/androiddevelopers/a-patchwork-plaid-monolith-to-modularized-app-60235d9f212e)
+
 ### Goals
 * Migrate Plaid to Architecture Components. The refactoring will follow the architecture described in [Guide to App Architecture](https://developer.android.com/jetpack/docs/guide).  
 * Convert to Kotlin, while migrating to Architecture Components.
@@ -25,6 +30,8 @@ Changes to the styles, themes, icons, animations, transitions or any other UI el
 
 ### Android Studio IDE setup
 
+Plaid requires Android Studio version 3.2 or higher.
+
 Plaid uses [ktlint](https://ktlint.github.io/) to enforce Kotlin coding styles.
 Here's how to configure it for use with Android Studio (instructions adapted
 from the ktlint [README](https://github.com/shyiko/ktlint/blob/master/README.md)):
@@ -32,7 +39,7 @@ from the ktlint [README](https://github.com/shyiko/ktlint/blob/master/README.md)
 - Close Android Studio if it's open
 - Download ktlint:
 
-  `curl -sSLO https://github.com/shyiko/ktlint/releases/download/0.24.0/ktlint && chmod a+x ktlint`
+  `curl -sSLO https://github.com/shyiko/ktlint/releases/download/0.27.0/ktlint && chmod a+x ktlint`
 
 - Inside the project root directory run:
 

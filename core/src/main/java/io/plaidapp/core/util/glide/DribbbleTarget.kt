@@ -18,8 +18,8 @@ package io.plaidapp.core.util.glide
 
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
-import android.support.v4.content.ContextCompat
-import android.support.v7.graphics.Palette
+import androidx.core.content.ContextCompat
+import androidx.palette.graphics.Palette
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.target.DrawableImageViewTarget
 import com.bumptech.glide.request.transition.Transition
@@ -66,7 +66,7 @@ class DribbbleTarget(
         }
     }
 
-    override fun onGenerated(palette: Palette) {
+    override fun onGenerated(palette: Palette?) {
         badgedImageView.foreground = ViewUtils.createRipple(palette, 0.25f, 0.5f,
                 ContextCompat.getColor(view.context, R.color.mid_grey), true)
     }

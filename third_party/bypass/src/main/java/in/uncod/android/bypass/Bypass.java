@@ -1,10 +1,11 @@
 package in.uncod.android.bypass;
 
-import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.support.annotation.ColorInt;
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -28,7 +29,7 @@ import in.uncod.android.bypass.style.HorizontalLineSpan;
 import in.uncod.android.bypass.style.ImageLoadingSpan;
 import in.uncod.android.bypass.style.TouchableUrlSpan;
 
-public class Bypass {
+public class Bypass implements Markdown {
     static {
         System.loadLibrary("bypass");
     }
@@ -48,30 +49,28 @@ public class Bypass {
     // We need to track multiple ordered lists at once because of nesting.
     private final Map<Element, Integer> mOrderedListNumber = new ConcurrentHashMap<Element, Integer>();
 
-    public Bypass(Context context, Options options) {
+    public Bypass(DisplayMetrics displayMetrics, Options options) {
         mOptions = options;
 
-        DisplayMetrics dm = context.getResources().getDisplayMetrics();
-
         mListItemIndent = (int) TypedValue.applyDimension(mOptions.mListItemIndentUnit,
-                mOptions.mListItemIndentSize, dm);
+                mOptions.mListItemIndentSize, displayMetrics);
 
         mBlockQuoteIndent = (int) TypedValue.applyDimension(mOptions.mBlockQuoteIndentUnit,
-                mOptions.mBlockQuoteIndentSize, dm);
+                mOptions.mBlockQuoteIndentSize, displayMetrics);
 
         mBlockQuoteLineWidth = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                mOptions.mBlockQuoteLineWidth, dm);
+                mOptions.mBlockQuoteLineWidth, displayMetrics);
 
         mBlockQuoteLineIndent = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
-                mOptions.mBlockQuoteLineIndent, dm);
+                mOptions.mBlockQuoteLineIndent, displayMetrics);
 
         mCodeBlockIndent = (int) TypedValue.applyDimension(mOptions.mCodeBlockIndentUnit,
-                mOptions.mCodeBlockIndentSize, dm);
+                mOptions.mCodeBlockIndentSize, displayMetrics);
 
         mHruleSize = (int) TypedValue.applyDimension(mOptions.mHruleUnit,
-                mOptions.mHruleSize, dm);
+                mOptions.mHruleSize, displayMetrics);
 
-        mHruleTopBottomPadding = (int) dm.density * 10;
+        mHruleTopBottomPadding = (int) displayMetrics.density * 10;
     }
 
     private static void setSpan(SpannableStringBuilder builder, Object what) {
@@ -92,8 +91,12 @@ public class Bypass {
         builder.setSpan(new AbsoluteSizeSpan(height, true), 0, 1, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
     }
 
-    public CharSequence markdownToSpannable(String markdown, ColorStateList linksColors,
-            int highlightColor, LoadImageCallback loadImageCallback) {
+    @NonNull
+    @Override
+    public CharSequence markdownToSpannable(@NonNull String markdown,
+                                            @NonNull ColorStateList linksColors,
+                                            int highlightColor,
+                                            @Nullable LoadImageCallback loadImageCallback) {
         Document document = processMarkdown(markdown);
 
         int size = document.getElementCount();
@@ -304,15 +307,6 @@ public class Bypass {
         }
 
         return builder;
-    }
-
-    public interface LoadImageCallback {
-        /**
-         * A callback to load an image found in a markdown document.
-         * @param src The source (url) of the image.
-         * @param loadingSpan A placeholder span making where the image should be inserted.
-         */
-        void loadImage(String src, ImageLoadingSpan loadingSpan);
     }
 
     /**

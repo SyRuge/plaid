@@ -21,25 +21,24 @@ package io.plaidapp.core.util
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.support.customtabs.CustomTabsIntent
-import android.support.customtabs.CustomTabsSession
-import android.support.v4.content.ContextCompat
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.browser.customtabs.CustomTabsSession
+import androidx.core.content.ContextCompat
 import io.plaidapp.core.R
-import io.plaidapp.core.designernews.data.api.UpvoteStoryService
-import io.plaidapp.core.designernews.data.api.model.Story
+import io.plaidapp.core.designernews.data.votes.UpvoteStoryService
 
 /**
  * Helpers to start activities in a modularized world.
  */
 
-private const val PACKAGE_NAME = "io.plaidapp.ui"
+private const val PACKAGE_NAME = "io.plaidapp"
 
 /**
  * Create an Intent with [Intent.ACTION_VIEW] to an [AddressableActivity].
  */
 fun intentTo(addressableActivity: AddressableActivity): Intent {
     return Intent(Intent.ACTION_VIEW).setClassName(
-            "io.plaidapp",
+            PACKAGE_NAME,
             addressableActivity.className)
 }
 
@@ -64,7 +63,7 @@ object Activities {
      * AboutActivity
      */
     object About : AddressableActivity {
-        override val className = "$PACKAGE_NAME.about.AboutActivity"
+        override val className = "$PACKAGE_NAME.about.ui.AboutActivity"
     }
 
     /**
@@ -72,25 +71,25 @@ object Activities {
      */
     object DesignerNews {
         /**
-         * DesignerNewsLogin Activity
+         * DesignerNews LoginActivity
          */
         object Login : AddressableActivity {
-            override val className = "$PACKAGE_NAME.designernews.DesignerNewsLogin"
+            override val className = "$PACKAGE_NAME.designernews.ui.login.LoginActivity"
         }
 
         /**
          * DesignerNewsStory Activity
          */
         object Story : AddressableActivity {
-            override val className = "$PACKAGE_NAME.designernews.story.DesignerNewsStory"
-            const val EXTRA_STORY = "story"
+            override val className = "$PACKAGE_NAME.designernews.ui.story.StoryActivity"
+            const val EXTRA_STORY_ID = "story_id"
 
             /**
              * Create the intent for this Activity's custom tab.
              */
             fun customTabIntent(
                 context: Context,
-                story: io.plaidapp.core.designernews.data.api.model.Story,
+                story: io.plaidapp.core.designernews.data.stories.model.Story,
                 session: CustomTabsSession?
             ): CustomTabsIntent.Builder {
                 val upvoteStory = Intent(context, UpvoteStoryService::class.java)
@@ -127,12 +126,12 @@ object Activities {
      */
     object Dribbble {
         /**
-         * DribbbleShot Activity
+         * ShotActivity
          */
         object Shot : AddressableActivity {
-            override val className = "$PACKAGE_NAME.dribbble.DribbbleShot"
+            override val className = "$PACKAGE_NAME.dribbble.ui.shot.ShotActivity"
 
-            const val EXTRA_SHOT = "EXTRA_SHOT"
+            const val EXTRA_SHOT_ID = "EXTRA_SHOT_ID"
             const val RESULT_EXTRA_SHOT_ID = "RESULT_EXTRA_SHOT_ID"
         }
     }
@@ -141,7 +140,7 @@ object Activities {
      * SearchActivity
      */
     object Search : AddressableActivity {
-        override val className = "$PACKAGE_NAME.search.SearchActivity"
+        override val className = "$PACKAGE_NAME.search.ui.SearchActivity"
 
         const val EXTRA_QUERY = "EXTRA_QUERY"
         const val EXTRA_SAVE_DRIBBBLE = "EXTRA_SAVE_DRIBBBLE"

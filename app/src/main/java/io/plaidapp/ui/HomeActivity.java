@@ -28,73 +28,48 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.drawable.AnimatedVectorDrawable;
-import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
-import android.net.NetworkRequest;
+import android.net.*;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.LocalBroadcastManager;
-import android.support.v4.view.GravityCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.Annotation;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-import android.text.SpannedString;
-import android.text.TextUtils;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import android.text.*;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.ImageSpan;
 import android.transition.TransitionManager;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.MotionEvent;
-import android.view.View;
-import android.view.ViewAnimationUtils;
-import android.view.ViewGroup;
-import android.view.ViewStub;
-import android.widget.FrameLayout;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
-import android.widget.Toolbar;
-
+import android.view.*;
+import android.widget.*;
 import com.bumptech.glide.integration.recyclerview.RecyclerViewPreloader;
 import com.bumptech.glide.util.ViewPreloadSizeProvider;
+import io.plaidapp.R;
+import io.plaidapp.core.data.DataManager;
+import io.plaidapp.core.data.Source;
+import io.plaidapp.core.designernews.Injection;
+import io.plaidapp.core.designernews.data.login.LoginRepository;
+import io.plaidapp.core.designernews.data.poststory.PostStoryService;
+import io.plaidapp.core.designernews.data.stories.model.Story;
+import io.plaidapp.core.dribbble.data.api.model.Shot;
+import io.plaidapp.core.ui.FeedAdapter;
+import io.plaidapp.core.ui.FilterAdapter;
+import io.plaidapp.core.ui.FilterAnimator;
+import io.plaidapp.core.ui.HomeGridItemAnimator;
+import io.plaidapp.core.ui.recyclerview.InfiniteScrollListener;
+import io.plaidapp.core.ui.transitions.FabTransform;
+import io.plaidapp.core.util.*;
+import io.plaidapp.ui.recyclerview.FilterTouchHelperCallback;
+import io.plaidapp.ui.recyclerview.GridItemDividerDecoration;
 
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import io.plaidapp.R;
-import io.plaidapp.core.data.DataManager;
-import io.plaidapp.core.data.PlaidItem;
-import io.plaidapp.core.data.Source;
-import io.plaidapp.core.data.api.dribbble.model.Shot;
-import io.plaidapp.core.data.pocket.PocketUtils;
-import io.plaidapp.core.data.prefs.SourceManager;
-import io.plaidapp.core.designernews.DesignerNewsPrefs;
-import io.plaidapp.core.designernews.data.api.PostStoryService;
-import io.plaidapp.core.designernews.data.api.model.Story;
-import io.plaidapp.core.ui.FeedAdapter;
-import io.plaidapp.core.ui.FilterAdapter;
-import io.plaidapp.core.ui.HomeGridItemAnimator;
-import io.plaidapp.core.ui.recyclerview.InfiniteScrollListener;
-import io.plaidapp.core.util.Activities;
-import io.plaidapp.core.util.ActivityHelper;
-import io.plaidapp.core.util.AnimUtils;
-import io.plaidapp.core.util.DrawableUtils;
-import io.plaidapp.core.util.ViewUtils;
-import io.plaidapp.ui.recyclerview.FilterTouchHelperCallback;
-import io.plaidapp.ui.recyclerview.GridItemDividerDecoration;
-import io.plaidapp.ui.transitions.FabTransform;
+import static io.plaidapp.dagger.Injector.inject;
 
 public class HomeActivity extends Activity {
 
@@ -108,7 +83,8 @@ public class HomeActivity extends Activity {
     private ImageButton fab;
     private RecyclerView filtersList;
     private ProgressBar loading;
-    private @Nullable ImageView noConnection;
+    private @Nullable
+    ImageView noConnection;
     ImageButton fabPosting;
     GridLayoutManager layoutManager;
     private int columns;
@@ -117,16 +93,23 @@ public class HomeActivity extends Activity {
     private boolean monitoringConnectivity = false;
 
     // data
+    @Inject
     DataManager dataManager;
+    @Inject
     FeedAdapter adapter;
+    @Inject
     FilterAdapter filtersAdapter;
-    private DesignerNewsPrefs designerNewsPrefs;
+    private LoginRepository loginRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         bindResources();
+        inject(this, data -> {
+            adapter.addAndResort(data);
+            checkEmptyState();
+        });
 
         drawer.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -138,17 +121,8 @@ public class HomeActivity extends Activity {
         }
         setExitSharedElementCallback(FeedAdapter.createSharedElementReenterCallback(this));
 
-        designerNewsPrefs = DesignerNewsPrefs.get(this);
-        filtersAdapter = new FilterAdapter(this, SourceManager.getSources(this));
-        dataManager = new DataManager(this, filtersAdapter) {
-            @Override
-            public void onDataLoaded(List<? extends PlaidItem> data) {
-                adapter.addAndResort(data);
-                checkEmptyState();
-            }
-        };
+        loginRepository = Injection.provideLoginRepository(this);
         ViewPreloadSizeProvider<Shot> shotPreloadSizeProvider = new ViewPreloadSizeProvider<>();
-        adapter = new FeedAdapter(this, dataManager, columns, PocketUtils.isPocketInstalled(this), shotPreloadSizeProvider);
 
         grid.setAdapter(adapter);
         layoutManager = new GridLayoutManager(this, columns);
@@ -232,7 +206,7 @@ public class HomeActivity extends Activity {
         setupTaskDescription();
 
         filtersList.setAdapter(filtersAdapter);
-        filtersList.setItemAnimator(new FilterAdapter.FilterAnimator());
+        filtersList.setItemAnimator(new FilterAnimator());
         filtersAdapter.registerFilterChangedCallback(filtersChangedCallbacks);
         dataManager.loadAllDataSources();
         ItemTouchHelper.Callback callback = new FilterTouchHelperCallback(filtersAdapter, this);
@@ -311,7 +285,7 @@ public class HomeActivity extends Activity {
     public boolean onPrepareOptionsMenu(Menu menu) {
         final MenuItem designerNewsLogin = menu.findItem(R.id.menu_designer_news_login);
         if (designerNewsLogin != null) {
-            designerNewsLogin.setTitle(designerNewsPrefs.isLoggedIn() ?
+            designerNewsLogin.setTitle(loginRepository.isLoggedIn() ?
                     R.string.designer_news_log_out : R.string.designer_news_login);
         }
         return true;
@@ -330,10 +304,11 @@ public class HomeActivity extends Activity {
                 startActivityForResult(ActivityHelper.intentTo(Activities.Search.INSTANCE), RC_SEARCH, options);
                 return true;
             case R.id.menu_designer_news_login:
-                if (!designerNewsPrefs.isLoggedIn()) {
+                if (!loginRepository.isLoggedIn()) {
                     startActivity(ActivityHelper.intentTo(Activities.DesignerNews.Login.INSTANCE));
                 } else {
-                    designerNewsPrefs.logout(HomeActivity.this);
+                    loginRepository.logout();
+                    ShortcutHelper.disablePostShortcut(this);
                     // TODO something better than a toast!!
                     Toast.makeText(getApplicationContext(), R.string.designer_news_logged_out,
                             Toast.LENGTH_SHORT).show();
@@ -453,7 +428,7 @@ public class HomeActivity extends Activity {
     };
 
     protected void fabClick() {
-        if (designerNewsPrefs.isLoggedIn()) {
+        if (loginRepository.isLoggedIn()) {
             Intent intent = ActivityHelper.intentTo(Activities.DesignerNews.PostStory.INSTANCE);
             FabTransform.addExtras(intent,
                     ContextCompat.getColor(this, R.color.accent), R.drawable.ic_add_dark);

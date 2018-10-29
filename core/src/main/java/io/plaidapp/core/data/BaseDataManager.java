@@ -17,23 +17,22 @@
 
 package io.plaidapp.core.data;
 
-import android.support.annotation.NonNull;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import androidx.annotation.NonNull;
 import io.plaidapp.core.BuildConfig;
-import io.plaidapp.core.data.api.dribbble.DribbbleSearchConverter;
-import io.plaidapp.core.data.api.dribbble.DribbbleSearchService;
+import io.plaidapp.core.dribbble.data.search.DribbbleSearchConverter;
+import io.plaidapp.core.dribbble.data.search.DribbbleSearchService;
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import okhttp3.logging.HttpLoggingInterceptor.Level;
 import retrofit2.Retrofit;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Base class for loading data; extending types are responsible for providing implementations of
- * {@link #onDataLoaded(Object)} to do something with the data and {@link #cancelLoading()} to
+ * {@link OnDataLoadedCallback} to do something with the data and {@link #cancelLoading()} to
  * cancel any activity.
  */
 public abstract class BaseDataManager<T> implements DataLoadingSubject {
@@ -41,12 +40,23 @@ public abstract class BaseDataManager<T> implements DataLoadingSubject {
     private final AtomicInteger loadingCount;
     private DribbbleSearchService dribbbleSearchApi;
     private List<DataLoadingCallbacks> loadingCallbacks;
+    private OnDataLoadedCallback<T> onDataLoadedCallback;
 
     public BaseDataManager() {
         loadingCount = new AtomicInteger(0);
     }
 
-    public abstract void onDataLoaded(T data);
+    public interface OnDataLoadedCallback<T> {
+        void onDataLoaded(T data);
+    }
+
+   public void setOnDataLoadedCallback(OnDataLoadedCallback<T> onDataLoadedCallback) {
+        this.onDataLoadedCallback = onDataLoadedCallback;
+    }
+
+    public final void onDataLoaded(T data) {
+        onDataLoadedCallback.onDataLoaded(data);
+    }
 
     public abstract void cancelLoading();
 
@@ -93,13 +103,13 @@ public abstract class BaseDataManager<T> implements DataLoadingSubject {
 
     protected static void setPage(List<? extends PlaidItem> items, int page) {
         for (PlaidItem item : items) {
-            item.page = page;
+            item.setPage(page);
         }
     }
 
     protected static void setDataSource(List<? extends PlaidItem> items, String dataSource) {
         for (PlaidItem item : items) {
-            item.dataSource = dataSource;
+            item.setDataSource(dataSource);
         }
     }
 

@@ -22,10 +22,10 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.customtabs.CustomTabsClient;
-import android.support.customtabs.CustomTabsIntent;
-import android.support.customtabs.CustomTabsServiceConnection;
-import android.support.customtabs.CustomTabsSession;
+import androidx.browser.customtabs.CustomTabsClient;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.browser.customtabs.CustomTabsServiceConnection;
+import androidx.browser.customtabs.CustomTabsSession;
 
 import java.util.List;
 
@@ -36,9 +36,9 @@ import java.util.List;
  */
 public class CustomTabActivityHelper {
     private CustomTabsSession mCustomTabsSession;
-    private CustomTabsClient mClient;
+    CustomTabsClient mClient;
     private CustomTabsServiceConnection mConnection;
-    private ConnectionCallback mConnectionCallback;
+    ConnectionCallback mConnectionCallback;
 
     /**
      * Opens the URL on a Custom Tab if possible; otherwise falls back to opening it via
@@ -61,6 +61,11 @@ public class CustomTabActivityHelper {
         } else {
             activity.startActivity(new Intent(Intent.ACTION_VIEW, uri));
         }
+    }
+    public static void openCustomTab(Activity activity,
+                                     CustomTabsIntent customTabsIntent,
+                                     String url) {
+        openCustomTab(activity, customTabsIntent, Uri.parse(url));
     }
 
     /**

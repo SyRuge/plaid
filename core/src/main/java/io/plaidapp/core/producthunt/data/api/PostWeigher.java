@@ -33,13 +33,13 @@ public class PostWeigher implements PlaidItemSorting.PlaidItemGroupWeigher<Post>
         float maxVotes = 0f;
         float maxComments = 0f;
         for (Post post : posts) {
-            maxVotes = Math.max(maxVotes, post.votes_count);
-            maxComments = Math.max(maxComments, post.comments_count);
+            maxVotes = Math.max(maxVotes, post.getVotesCount());
+            maxComments = Math.max(maxComments, post.getCommentsCount());
         }
         for (Post post : posts) {
-            float weight = 1f - ((((float) post.comments_count) / maxComments) +
-                    ((float) post.votes_count / maxVotes)) / 2f;
-            post.weight = post.page + weight;
+            float weight = 1f - ((((float) post.getCommentsCount()) / maxComments) +
+                    ((float) post.getVotesCount() / maxVotes)) / 2f;
+            post.setWeight(post.getPage() + weight);
         }
     }
 

@@ -17,12 +17,13 @@
 
 package io.plaidapp.core.designernews.data.api;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import android.text.TextUtils;
 
 import java.io.IOException;
 
+import io.plaidapp.core.designernews.data.login.AuthTokenLocalDataSource;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -34,10 +35,10 @@ import okhttp3.Response;
  */
 public class ClientAuthInterceptor implements Interceptor {
 
-    private final DesignerNewsAuthTokenLocalDataSource authTokenDataSource;
+    private final AuthTokenLocalDataSource authTokenDataSource;
     private final String clientId;
 
-    public ClientAuthInterceptor(@Nullable DesignerNewsAuthTokenLocalDataSource authTokenDataSource,
+    public ClientAuthInterceptor(@Nullable AuthTokenLocalDataSource authTokenDataSource,
             @NonNull String clientId) {
         this.authTokenDataSource = authTokenDataSource;
         this.clientId = clientId;

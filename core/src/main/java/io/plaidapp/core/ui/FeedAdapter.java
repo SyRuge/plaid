@@ -17,8 +17,6 @@
 
 package io.plaidapp.core.ui;
 
-import static io.plaidapp.core.util.AnimUtils.getFastOutSlowInInterpolator;
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
@@ -34,12 +32,12 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
 import android.net.Uri;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.customtabs.CustomTabsIntent;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.ColorInt;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.browser.customtabs.CustomTabsIntent;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.RecyclerView;
 import android.transition.Transition;
 import android.transition.TransitionInflater;
 import android.util.Pair;
@@ -48,7 +46,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ProgressBar;
-
 import com.bumptech.glide.ListPreloader;
 import com.bumptech.glide.RequestBuilder;
 import com.bumptech.glide.load.DataSource;
@@ -59,37 +56,36 @@ import com.bumptech.glide.load.resource.gif.GifDrawable;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.util.ViewPreloadSizeProvider;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
 import io.plaidapp.core.R;
 import io.plaidapp.core.data.DataLoadingSubject;
 import io.plaidapp.core.data.PlaidItem;
 import io.plaidapp.core.data.PlaidItemSorting;
-import io.plaidapp.core.data.api.dribbble.ShotWeigher;
-import io.plaidapp.core.data.api.dribbble.model.Shot;
 import io.plaidapp.core.data.pocket.PocketUtils;
 import io.plaidapp.core.data.prefs.SourceManager;
-import io.plaidapp.core.designernews.data.api.StoryWeigher;
-import io.plaidapp.core.designernews.data.api.model.Story;
-import io.plaidapp.core.designernews.ui.DesignerNewsStoryHolder;
+import io.plaidapp.core.designernews.data.stories.model.Story;
+import io.plaidapp.core.designernews.domain.StoryWeigher;
+import io.plaidapp.core.designernews.ui.stories.StoryViewHolder;
+import io.plaidapp.core.dribbble.data.api.ShotWeigher;
+import io.plaidapp.core.dribbble.data.api.model.Images;
+import io.plaidapp.core.dribbble.data.api.model.Shot;
 import io.plaidapp.core.producthunt.data.api.PostWeigher;
 import io.plaidapp.core.producthunt.data.api.model.Post;
 import io.plaidapp.core.producthunt.ui.ProductHuntPostHolder;
 import io.plaidapp.core.ui.transitions.ReflowText;
 import io.plaidapp.core.ui.widget.BadgedFourThreeImageView;
-import io.plaidapp.core.util.Activities;
-import io.plaidapp.core.util.ActivityHelper;
-import io.plaidapp.core.util.ObservableColorMatrix;
-import io.plaidapp.core.util.TransitionUtils;
-import io.plaidapp.core.util.ViewUtils;
+import io.plaidapp.core.util.*;
 import io.plaidapp.core.util.customtabs.CustomTabActivityHelper;
 import io.plaidapp.core.util.glide.DribbbleTarget;
 import io.plaidapp.core.util.glide.GlideApp;
 import kotlin.Unit;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import static io.plaidapp.core.util.AnimUtils.getFastOutSlowInInterpolator;
 
 /**
  * Adapter for displaying a grid of {@link PlaidItem}s.
@@ -125,6 +121,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     private StoryWeigher storyWeigher;
     private PostWeigher postWeigher;
 
+    @Inject
     public FeedAdapter(Activity hostActivity,
             @Nullable DataLoadingSubject dataLoading,
             int columns,
@@ -182,7 +179,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
         switch (getItemViewType(position)) {
             case TYPE_DESIGNER_NEWS_STORY:
-                ((DesignerNewsStoryHolder) holder).bind((Story) getItem(position));
+                ((StoryViewHolder) holder).bind((Story) getItem(position));
                 break;
             case TYPE_DRIBBBLE_SHOT:
                 bindDribbbleShotHolder(
@@ -210,12 +207,12 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     @NonNull
-    private DesignerNewsStoryHolder createDesignerNewsStoryHolder(ViewGroup parent) {
-        final DesignerNewsStoryHolder holder = new DesignerNewsStoryHolder(
+    private StoryViewHolder createDesignerNewsStoryHolder(ViewGroup parent) {
+        final StoryViewHolder holder = new StoryViewHolder(
                 layoutInflater.inflate(R.layout.designer_news_story_item, parent, false),
                 pocketIsInstalled,
                 (story, position) -> {
-                    PocketUtils.addToPocket(host, story.url);
+                    PocketUtils.addToPocket(host, story.getUrl());
                     // notify changed with a payload asking RV to run the anim
                     notifyItemChanged(position, HomeGridItemAnimator.ADD_TO_POCKET);
                     return Unit.INSTANCE;
@@ -224,9 +221,11 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                     openDesignerNewsStory(data);
                     return Unit.INSTANCE;
                 },
-                story -> {
-                    if (story.url != null) {
-                        openTabDesignerNews(story);
+                data -> {
+                    if (data.getStory().getUrl() != null) {
+                        openTabDesignerNews(data.getStory());
+                    } else {
+                        openDesignerNewsStory(data);
                     }
                     return Unit.INSTANCE;
                 }
@@ -235,9 +234,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         return holder;
     }
 
-    private void openDesignerNewsStory(DesignerNewsStoryHolder.TransitionData data) {
+    private void openDesignerNewsStory(StoryViewHolder.TransitionData data) {
         final Intent intent = ActivityHelper.intentTo(Activities.DesignerNews.Story.INSTANCE);
-        intent.putExtra(Activities.DesignerNews.Story.EXTRA_STORY, data.getStory());
+        intent.putExtra(Activities.DesignerNews.Story.EXTRA_STORY_ID, data.getStory().getId());
         ReflowText.addExtras(intent, new ReflowText.ReflowableTextView(data.getTitle()));
         setGridItemContentTransitions(data.getItemView());
 
@@ -260,7 +259,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         CustomTabActivityHelper.openCustomTab(host,
                 Activities.DesignerNews.Story.INSTANCE
                         .customTabIntent(host, story, null).build(),
-                Uri.parse(story.url));
+                Uri.parse(story.getUrl()));
     }
 
     @NonNull
@@ -270,8 +269,8 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         holder.image.setBadgeColor(initialGifBadgeColor);
         holder.image.setOnClickListener(view -> {
             Intent intent = ActivityHelper.intentTo(Activities.Dribbble.Shot.INSTANCE);
-            intent.putExtra(Activities.Dribbble.Shot.EXTRA_SHOT,
-                    (Shot) getItem(holder.getAdapterPosition()));
+            intent.putExtra(Activities.Dribbble.Shot.EXTRA_SHOT_ID,
+                    getItem(holder.getAdapterPosition()).getId());
             setGridItemContentTransitions(holder.image);
             ActivityOptions options =
                     ActivityOptions.makeSceneTransitionAnimation(host,
@@ -323,18 +322,18 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     }
 
     private void bindDribbbleShotHolder(final Shot shot,
-            final DribbbleShotHolder holder,
-            int position) {
-        final int[] imageSize = shot.images.bestSize();
+                                        final DribbbleShotHolder holder,
+                                        int position) {
+        final Images.ImageSize imageSize = shot.getImages().bestSize();
         GlideApp.with(host)
-                .load(shot.images.best())
+                .load(shot.getImages().best())
                 .listener(new RequestListener<Drawable>() {
 
                     @Override
                     public boolean onResourceReady(Drawable resource, Object model,
-                            Target<Drawable> target, DataSource dataSource,
-                            boolean isFirstResource) {
-                        if (!shot.hasFadedIn) {
+                                                   Target<Drawable> target, DataSource dataSource,
+                                                   boolean isFirstResource) {
+                        if (!shot.getHasFadedIn()) {
                             holder.image.setHasTransientState(true);
                             final ObservableColorMatrix cm = new ObservableColorMatrix();
                             final ObjectAnimator saturation = ObjectAnimator.ofFloat(
@@ -355,14 +354,14 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                                 }
                             });
                             saturation.start();
-                            shot.hasFadedIn = true;
+                            shot.setHasFadedIn(true);
                         }
                         return false;
                     }
 
                     @Override
                     public boolean onLoadFailed(@Nullable GlideException e, Object model,
-                            Target<Drawable> target, boolean isFirstResource) {
+                                                Target<Drawable> target, boolean isFirstResource) {
                         return false;
                     }
                 })
@@ -370,14 +369,14 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
                 .diskCacheStrategy(DiskCacheStrategy.DATA)
                 .fitCenter()
                 .transition(DrawableTransitionOptions.withCrossFade())
-                .override(imageSize[0], imageSize[1])
+                .override(imageSize.getWidth(), imageSize.getHeight())
                 .into(new DribbbleTarget(holder.image, false));
         // need both placeholder & background to prevent seeing through shot as it fades in
         holder.image.setBackground(
                 shotLoadingPlaceholders[position % shotLoadingPlaceholders.length]);
-        holder.image.setDrawBadge(shot.animated);
+        holder.image.setDrawBadge(shot.getAnimated());
         // need a unique transition name per shot, let's use it's url
-        holder.image.setTransitionName(shot.html_url);
+        holder.image.setTransitionName(shot.getHtmlUrl());
         shotPreloadSizeProvider.setView(holder.image);
     }
 
@@ -386,11 +385,11 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final ProductHuntPostHolder holder = new ProductHuntPostHolder(
                 layoutInflater.inflate(R.layout.product_hunt_item, parent, false),
                 post -> {
-                    openTabForProductHunt(post.discussion_url);
+                    openTabForProductHunt(post.getDiscussionUrl());
                     return Unit.INSTANCE;
                 },
                 post -> {
-                    openTabForProductHunt(post.redirect_url);
+                    openTabForProductHunt(post.getRedirectUrl());
                     return Unit.INSTANCE;
                 });
         return holder;
@@ -441,7 +440,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
             case TYPE_LOADING_MORE:
                 return columns;
             default:
-                return getItem(position).colspan;
+                return getItem(position).getColspan();
         }
     }
 
@@ -473,7 +472,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         if (items == null || items.isEmpty()) return;
 
         PlaidItemSorting.PlaidItemGroupWeigher weigher = null;
-        switch (items.get(0).dataSource) {
+        switch (items.get(0).getDataSource()) {
             // some sources should just use the natural order i.e. as returned by the API as users
             // have an expectation about the order they appear in
             case SourceManager.SOURCE_PRODUCT_HUNT:
@@ -535,12 +534,12 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         final int count = items.size();
         for (int i = 0; i < count; i++) {
             PlaidItem item = getItem(i);
-            if (item instanceof Shot && item.page > page) {
-                item.colspan = columns;
-                page = item.page;
+            if (item instanceof Shot && item.getPage() > page) {
+                item.setColspan(columns);
+                page = item.getPage();
                 expandedPositions.add(i);
             } else {
-                item.colspan = 1;
+                item.setColspan(1);
             }
         }
 
@@ -562,7 +561,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
     public void removeDataSource(String dataSource) {
         for (int i = items.size() - 1; i >= 0; i--) {
             PlaidItem item = items.get(i);
-            if (dataSource.equals(item.dataSource)) {
+            if (dataSource.equals(item.getDataSource())) {
                 items.remove(i);
             }
         }
@@ -576,12 +575,12 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
         if (getItemViewType(position) == TYPE_LOADING_MORE) {
             return -1L;
         }
-        return getItem(position).id;
+        return getItem(position).getId();
     }
 
     public int getItemPosition(final long itemId) {
         for (int position = 0; position < items.size(); position++) {
-            if (getItem(position).id == itemId) return position;
+            if (getItem(position).getId() == itemId) return position;
         }
         return RecyclerView.NO_POSITION;
     }
@@ -677,7 +676,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder>
 
     @Override
     public RequestBuilder<Drawable> getPreloadRequestBuilder(Shot item) {
-        return GlideApp.with(host).load(item.images.best());
+        return GlideApp.with(host).load(item.getImages().best());
     }
 
     static class DribbbleShotHolder extends RecyclerView.ViewHolder {
